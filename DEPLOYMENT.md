@@ -1,4 +1,4 @@
-﻿# Thông Tin Deploy — Checkpoint 5
+# Thông Tin Deploy — Checkpoint 5
 
 ## Thông tin học viên
 
@@ -13,13 +13,13 @@
 | Mục | Nội dung |
 |---|---|
 | Platform | Render |
-| Public URL | Chưa được cấp; đang chờ tạo Blueprint trong tài khoản Render |
-| Ngày deploy cloud | Chưa xác nhận |
+| Public URL | https://day12-agent-gu55.onrender.com |
+| Ngày deploy cloud | 2026-09-29 |
 | Kiểm thử local | CP1 13/13, CP3 22/22, CP4 19/19; 4 kiểm thử bổ sung đạt |
 | Docker trên GitHub Actions | Build thành công; kiểm tra image dưới 500 MiB và non-root đạt |
 
-Chưa coi CP5 hoàn tất. Không có URL hoặc ảnh dashboard giả. LOCAL_FALLBACK
-chưa được bật vì mục tiêu đã chọn là deploy Render.
+Public HTTPS đã kiểm tra thành công. LOCAL_FALLBACK=false. Ảnh dashboard
+còn cần bổ sung; kiểm thử có key chờ DEPLOY_API_KEY cục bộ.
 
 ## Tạo service từ Blueprint
 
@@ -70,13 +70,22 @@ Uvicorn local với fake Redis (chưa phải cloud hoặc Docker stack):
 /ask 200 history_length 2
 ```
 
-Kết quả cloud: đang chờ URL service.
+Kết quả cloud thực tế ngày 2026-09-29:
+
+```text
+GET /health -> 200 {"status":"ok","service":"day12-agent","version":"1.0.0"}
+GET /ready -> 200 {"status":"ready","redis":true}
+POST /ask (không có API key) -> 401 {"detail":"invalid or missing API key"}
+```
+
+Readiness xác nhận service kết nối được Redis thật trên Render.
 
 ## Ảnh minh chứng
 
 Cần bổ sung screenshots/dashboard.png từ dashboard Render và
 screenshots/health.png từ kết quả HTTP thực. Không chụp phần environment
-hiện giá trị secret. Chưa có hai ảnh này tại thời điểm ghi nhận.
+hiện giá trị secret. Ảnh health.png đã chụp trực tiếp từ endpoint công khai bằng Edge headless.
+Ảnh dashboard.png đang chờ người dùng lưu từ phiên Render đã đăng nhập.
 
 ## CI/CD
 

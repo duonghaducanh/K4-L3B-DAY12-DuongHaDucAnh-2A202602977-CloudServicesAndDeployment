@@ -1,4 +1,4 @@
-﻿# Phiếu Phản Ánh — K4 Level 3B, Ngày 12
+# Phiếu Phản Ánh — K4 Level 3B, Ngày 12
 
 Họ và tên: Dương Hà Đức Anh — Mã học viên: 2A202602977.
 
@@ -22,10 +22,10 @@ Có thể lọc theo timestamp/user_id rồi cộng cost_usd theo user/ngày đ�
 
 | Bản | Dung lượng đo thực tế |
 |---|---|
-| 1 stage, base python:3.11 | Chưa đo |
-| Multi-stage, base python:3.11-slim | CI đã xác nhận dưới 500 MiB; chờ số đo local |
+| 1 stage, base python:3.11 | 1,188,388,097 bytes = 1,188.39 MB |
+| Multi-stage, base python:3.11-slim | 208,822,946 bytes = 208.82 MB |
 
-Docker Hub đang tải base image rất chậm trên máy local. Không lấy số MB từ ví dụ trong đề làm số đo. So sánh bản gốc python:3.11 với slim chủ yếu phản ánh các thư viện/công cụ khác nhau trong base image. Multi-stage loại những thành phần builder không copy sang runtime; bài này cài wheel, không thêm compiler, nên không thể gán toàn bộ chênh lệch dung lượng cho multi-stage.
+Số đo từ Docker image inspect trong GitHub Actions run 36517699543, artifact image-size-evidence (benchmarks/image-sizes.txt). MB ở đây là 1,000,000 bytes; hai image được build trên cùng runner. Bản single dùng benchmarks/Dockerfile.single giữ cấu trúc Dockerfile gốc và cùng .dockerignore an toàn. So sánh bản gốc python:3.11 với slim chủ yếu phản ánh các thư viện/công cụ khác nhau trong base image. Multi-stage loại những thành phần builder không copy sang runtime; bài này cài wheel, không thêm compiler, nên không thể gán toàn bộ chênh lệch dung lượng cho multi-stage.
 
 ### Câu 4 — Thứ tự lệnh trong Dockerfile (CP2)
 
@@ -53,4 +53,4 @@ Kiểm thử hai ConversationStore dùng chung Redis xác nhận instance B đ�
 
 ### Câu 10 — Deploy thật (CP5)
 
-Chưa quan sát lỗi deploy Render vì đang chờ tạo Blueprint và URL công khai. Lỗi hạ tầng local thực đã gặp: `permission denied while trying to connect to the docker API at npipe`. Kiểm tra lại với quyền truy cập Docker phù hợp trả Engine 29.1.2; sau đó Docker build bắt đầu tải base image. Đây là lỗi quyền ở môi trường chạy công cụ, chưa phải lỗi ứng dụng trên Render. Câu này cần cập nhật bằng quan sát cloud thật khi có URL, không thay bằng lỗi giả.
+Khi chạy test CP5 với URL Render thật, /ready có một lần báo `httpx.ConnectTimeout: timed out` sau ngưỡng kết nối 20 giây. Ngay trước đó, gọi trực tiếp trả /health 200, /ready 200 và /ask thiếu key 401. Traceback ở bước connect_tcp, không phải response 503 của readiness, nên bằng chứng nghiêng về kết nối mạng tạm thời thay vì sai REDIS_URL. Chạy lại nguyên bộ CP5 đạt 8 passed, 5 skipped trong 65.86 giây. Không đổi code hoặc tăng timeout; kết nối đã phục hồi ở lần kiểm tra này. Năm test bỏ qua gồm bốn test local fallback và một test có key cloud chưa cấu hình.

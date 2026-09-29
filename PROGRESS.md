@@ -40,4 +40,9 @@
 - GitHub Actions run 36517229712 completed successfully (test + Docker build); deploy was disabled pending Render setup.
 - Four additional checks passed: concurrent quota enforcement, budget short-circuit before LLM, blank secret rejection, monthly bucket isolation.
 - Local Uvicorn smoke: health/ready 200, authenticated asks saw history lengths 0 and 2.
-- Cloud CP5 remains pending a real Render URL and screenshots.
+- Cloud CP5 public URL: https://day12-agent-gu55.onrender.com.
+- CP5 rerun: 8 passed, 5 skipped (4 local fallback + optional authenticated request).
+- Initial readiness request had a TCP ConnectTimeout; rerun recovered without code changes.
+- health.png captures the actual public endpoint; dashboard screenshot is still pending.
+- Bonus tests including the live GitHub badge: 13 passed.
+- CI run 36517699543 measured single-stage 1,188,388,097 bytes; multi-stage 208,822,946 bytes.
