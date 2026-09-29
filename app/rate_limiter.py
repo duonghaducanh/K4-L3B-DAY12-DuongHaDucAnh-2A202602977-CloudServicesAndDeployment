@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import time
 import uuid
+from redis.exceptions import WatchError
 
 from fastapi import HTTPException, status
 
@@ -36,7 +37,12 @@ class RateLimiter:
              ``self.client.zremrangebyscore(key, 0, now - WINDOW_SECONDS)``
           3. Trả về ``self.client.zcard(key)``
         """
-        raise NotImplementedError("TODO (CP3): cài đặt hit_count")
+        now = time.time() if now is None else now
+        key = self._key(user_id)
+        with self.client.pipeline() as pipe:
+            pipe.zremrangebyscore(key, "-inf", now - WINDOW_SECONDS)
+            pipe.zcard(key)
+            return int(pipe.execute()[1])
 
     def check(self, user_id: str, now: float | None = None) -> None:
         """Cho qua nếu còn quota, ngược lại raise 429.
@@ -56,4 +62,22 @@ class RateLimiter:
         Lưu ý thứ tự: **kiểm tra trước, ghi nhận sau**. Ghi trước rồi mới đếm
         sẽ chặn nhầm ngay ở request thứ ``limit``.
         """
-        raise NotImplementedError("TODO (CP3): cài đặt check")
+        now = time.time() if now is None else now
+        key = self._key(user_id)
+        # WATCH retries conflicting updates across workers, preventing quota races.
+        while True:
+            with self.client.pipeline() as pipe:
+                try:
+                    pipe.watch(key)
+                    count = pipe.zcount(key, f"({now - WINDOW_SECONDS}", "+inf")
+                    if count >= self.limit:
+                        raise HTTPException(status_code=429, detail="rate limit exceeded",
+                                            headers={"Retry-After": str(WINDOW_SECONDS)})
+                    pipe.multi()
+                    pipe.zremrangebyscore(key, "-inf", now - WINDOW_SECONDS)
+                    pipe.zadd(key, {f"{now}:{uuid.uuid4().hex}": now})
+                    pipe.expire(key, WINDOW_SECONDS)
+                    pipe.execute()
+                    return
+                except WatchError:
+                    continue

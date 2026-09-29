@@ -20,3 +20,10 @@
 
 - Dockerfile, Compose and ignore rules: 14 static tests passed.
 - Real build started; base-image download is slow. Build/size evidence will be recorded after completion.
+
+## CP3
+
+- API authentication, sliding-window limiter and monthly cost guard: 22/22 tests passed.
+- Rate limiting uses Redis WATCH/MULTI to prevent concurrent quota races.
+- Lab budget guard checks accrued spending before a call; it is not a strict reservation system for concurrent LLM billing.
+- X-User-Id is supplied by the trusted caller of the shared API key; production multi-tenant identity must come from verified credentials.
