@@ -1,119 +1,56 @@
-# Phiếu Phản Ánh — K4 Level 3B, Ngày 12
+﻿# Phiếu Phản Ánh — K4 Level 3B, Ngày 12
 
-> **Bài làm cá nhân.** Trả lời bằng lời của chính bạn, dựa trên những gì bạn
-> quan sát được khi chạy code — không sao chép đáp án của người khác.
->
-> Cách trả lời: thay dòng `> *Câu trả lời của bạn*` bằng câu trả lời.
-> `grade.py` đếm số câu đã trả lời (15 điểm cho 10 câu).
->
-> Họ và tên: ..........................  Mã học viên: ..........................
+Họ và tên: Dương Hà Đức Anh — Mã học viên: 2A202602977.
 
----
+Bản giải thích có hỗ trợ AI, dựa trên kiểm thử trong PROGRESS.md. Học viên cần đọc lại và giải thích được bài nộp. Các quan sát còn thiếu được ghi rõ.
 
 ### Câu 1 — Fail fast (CP1)
 
-Trong `Settings`, `agent_api_key` không có giá trị mặc định nên app chết ngay
-khi khởi động nếu thiếu biến môi trường. Hãy mô tả một tình huống cụ thể mà
-việc "chết sớm" này cứu bạn, so với việc để mặc định `"changeme"`.
-
-> *Câu trả lời của bạn*
-
----
+Khi tạo service Render nhưng quên nhập AGENT_API_KEY, Settings báo ValidationError trước khi Uvicorn nhận traffic. Nếu dùng changeme làm mặc định, service vẫn public và người biết code có thể gọi /ask. Kiểm thử thiếu biến và chuỗi rỗng đều đã chạy thành công. Lifespan gọi get_settings() để lỗi xảy ra lúc khởi động, không đợi request đầu tiên.
 
 ### Câu 2 — Log cho máy đọc (CP1)
 
-Chạy service và gọi `/ask` vài lần. Dán một dòng log JSON bạn thu được, rồi
-nêu **hai** việc bạn làm được với dòng log đó mà `print("đã trả lời xong")`
-không làm được.
+Log thực từ Uvicorn local, REDIS_URL=fake://, sau một request /ask:
 
-> *Câu trả lời của bạn*
+```json
+{"user_id":"local-evidence","tokens_in":3,"tokens_out":41,"cost_usd":2.505e-05,"event":"ask_completed","level":"info","timestamp":"2026-09-29T03:28:56.781961+00:00"}
+```
 
----
+Có thể lọc theo timestamp/user_id rồi cộng cost_usd theo user/ngày để tìm người dùng tiêu nhiều nhất. Có thể tổng hợp tokens_in/tokens_out để phát hiện prompt quá lớn. Print thông báo không có các trường này thì không tổng hợp trực tiếp được. Log không chứa API key hoặc nội dung câu hỏi.
 
 ### Câu 3 — Kích thước image (CP2)
 
-Build cả hai phiên bản và ghi lại số đo thật:
+| Bản | Dung lượng đo thực tế |
+|---|---|
+| 1 stage, base python:3.11 | Chưa đo |
+| Multi-stage, base python:3.11-slim | CI đã xác nhận dưới 500 MiB; chờ số đo local |
 
-```bash
-docker build -f <Dockerfile-1-stage> -t agent:single .
-docker build -t agent:multi .
-docker images | grep agent
-```
-
-| Bản | Dung lượng |
-|-----|-----------|
-| 1 stage (bản đầu) | ... MB |
-| Multi-stage | ... MB |
-
-Giải thích: phần dung lượng chênh lệch đó là những gì?
-
-> *Câu trả lời của bạn*
-
----
+Docker Hub đang tải base image rất chậm trên máy local. Không lấy số MB từ ví dụ trong đề làm số đo. So sánh bản gốc python:3.11 với slim chủ yếu phản ánh các thư viện/công cụ khác nhau trong base image. Multi-stage loại những thành phần builder không copy sang runtime; bài này cài wheel, không thêm compiler, nên không thể gán toàn bộ chênh lệch dung lượng cho multi-stage.
 
 ### Câu 4 — Thứ tự lệnh trong Dockerfile (CP2)
 
-Sửa một ký tự trong `app/main.py` rồi build lại. Với Dockerfile của bạn, những
-layer nào được dùng lại từ cache, layer nào phải chạy lại? Nếu bạn đặt
-`COPY . .` lên trước `RUN pip install` thì kết quả khác thế nào?
-
-> *Câu trả lời của bạn*
-
----
+requirements.txt được COPY trước bước cài dependency; app và utils được COPY riêng ở runtime. Khi chỉ đổi app/main.py, cache dependency builder vẫn hợp lệ; COPY app và các layer runtime phía sau được tính lại. COPY . . trước pip install làm checksum source thay đổi và vô hiệu cache bước pip. Đây là phân tích Dockerfile; quan sát cache thực tế sẽ bổ sung khi build local hoàn thành.
 
 ### Câu 5 — Vì sao không chạy bằng root (CP2)
 
-Container mặc định chạy bằng root. Mô tả chuỗi sự kiện dẫn từ "một lỗ hổng
-trong code Python của bạn" tới "kẻ tấn công có quyền cao trên máy host", và
-lệnh `USER` cắt đứt chuỗi đó ở chỗ nào.
-
-> *Câu trả lời của bạn*
-
----
+Nếu lỗi Python cho phép thực thi lệnh, lệnh có quyền của process ứng dụng. Với UID 0, kẻ tấn công sửa được nhiều file trong container; nếu có mount nhạy cảm, Docker socket hoặc lỗi kernel/container escape thì có thể tác động host. Root trong container không tự động đồng nghĩa root trên host. USER agent (UID 10001) giảm quyền ngay tại process bị khai thác, nhưng vẫn cần tránh privileged/socket mount và vá hệ thống. CI đã chạy id -u để xác nhận non-root.
 
 ### Câu 6 — Cửa sổ trượt (CP3)
 
-Rate limit của bạn dùng sliding window 60 giây. Nếu thay bằng cách đếm theo
-phút đồng hồ (reset lúc giây 00), một người dùng có thể gửi tối đa bao nhiêu
-request trong 2 giây liên tiếp khi hạn mức là 10/phút? Giải thích cách đạt được
-con số đó.
-
-> *Câu trả lời của bạn*
-
----
+Fixed window cho phép 20 request trong hai giây quanh ranh giới phút: 10 lúc 10:00:59 và 10 lúc 10:01:00. Sliding window đếm 60 giây gần nhất nên nhóm thứ hai bị chặn khi quota 10 đã đầy. ZSET dùng timestamp làm score và UUID trong member để các request cùng thời điểm không ghi đè. Test bổ sung gửi đồng thời 30 request cùng timestamp; chỉ 5 request được nhận khi limit=5. WATCH/MULTI bảo đảm hai worker không cùng đọc quota còn trống rồi cùng vượt giới hạn.
 
 ### Câu 7 — Rate limit và cost guard (CP3)
 
-Hai cơ chế này khác nhau ở điểm nào? Cho một tình huống mà rate limit cho qua
-nhưng cost guard phải chặn, và một tình huống ngược lại.
-
-> *Câu trả lời của bạn*
-
----
+Rate limit đo request/60 giây và trả 429; cost guard cộng USD/user/tháng UTC và trả 402. User gửi một request/phút nhưng đã tiêu 11 USD với budget 10 USD thì rate limit cho qua, cost guard chặn. User mới tiêu 0.001 USD nhưng gửi request thứ 11 trong một phút thì budget còn nhưng rate limit chặn. Test đã chứng minh budget vượt thì mock LLM không được gọi. Guard theo đề kiểm tra số đã tiêu trước request, chưa đặt trước chi phí nên không bảo đảm trần tuyệt đối khi nhiều request đồng thời hoặc một request quá đắt.
 
 ### Câu 8 — /health khác /ready (CP4)
 
-Nếu gộp hai endpoint làm một và cho nó kiểm tra Redis, chuyện gì xảy ra với cụm
-3 container khi Redis mất kết nối 30 giây? Trả lời theo đúng thứ tự sự kiện.
-
-> *Câu trả lời của bạn*
-
----
+Redis mất kết nối khiến probe kiểm tra Redis trả 503 ở cả ba instance. Nếu probe đó được dùng làm liveness và đủ số lần thất bại, orchestrator có thể restart cả ba. Khi Redis trở lại, app vẫn cần khởi động lại, kéo dài gián đoạn. Với hai endpoint riêng, /health vẫn 200 còn /ready 503 để ngừng nhận traffic; Redis phục hồi thì /ready tự về 200. Thời điểm restart phụ thuộc ngưỡng platform, không phải mọi lần mất Redis 30 giây đều restart. Test xác nhận readiness báo lỗi dependency và health không nhận dependency nào.
 
 ### Câu 9 — Stateless (CP4)
 
-Chạy `docker compose up --scale agent=3` rồi gọi `/ask` nhiều lần với cùng một
-`X-User-Id`. Quan sát `history_length` trong response. Nếu lịch sử được lưu
-trong một dict Python thay vì Redis, bạn sẽ thấy con số đó thay đổi thế nào?
-
-> *Câu trả lời của bạn*
-
----
+Kiểm thử hai ConversationStore dùng chung Redis xác nhận instance B đọc được message instance A ghi. Uvicorn local với fake Redis đã trả history_length 0 rồi 2 cho hai câu liên tiếp; đây chưa phải bằng chứng ba container. Cấu hình docker-compose.scale.yml bỏ port cố định của agent và đưa Nginx ra cổng 8000. Lịch sử chung tăng 0,2,4,... đến tối đa 20. Dict Python riêng từng process sẽ tạo các nhánh 0,0,2,... tùy instance nhận request và mất khi restart.
 
 ### Câu 10 — Deploy thật (CP5)
 
-Ghi lại **một** lỗi bạn gặp khi deploy lên cloud (build fail, health check
-timeout, sai REDIS_URL, app không đọc `$PORT`...): thông báo lỗi là gì, bạn
-tìm ra nguyên nhân bằng cách nào, và sửa ra sao?
-
-> *Câu trả lời của bạn*
+Chưa quan sát lỗi deploy Render vì đang chờ tạo Blueprint và URL công khai. Lỗi hạ tầng local thực đã gặp: `permission denied while trying to connect to the docker API at npipe`. Kiểm tra lại với quyền truy cập Docker phù hợp trả Engine 29.1.2; sau đó Docker build bắt đầu tải base image. Đây là lỗi quyền ở môi trường chạy công cụ, chưa phải lỗi ứng dụng trên Render. Câu này cần cập nhật bằng quan sát cloud thật khi có URL, không thay bằng lỗi giả.

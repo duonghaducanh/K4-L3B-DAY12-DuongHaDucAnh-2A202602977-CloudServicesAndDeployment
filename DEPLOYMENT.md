@@ -1,101 +1,110 @@
-# Thông Tin Deploy — Checkpoint 5
+﻿# Thông Tin Deploy — Checkpoint 5
 
-> Điền file này sau khi deploy xong. `pytest tests/test_cp5.py` đọc file này
-> để tìm địa chỉ service của bạn và gọi thử.
->
-> **Chỉ ghi TÊN biến môi trường, tuyệt đối không dán giá trị API key vào đây.**
-> Repo này công khai — dán khóa vào là mất khóa.
-
-## Thông Tin Học Viên
+## Thông tin học viên
 
 | Mục | Nội dung |
-|-----|----------|
-| Họ và tên | (điền họ tên) |
-| Mã học viên | (điền mã học viên) |
-| Repo | (điền link repo K4-L3B-DAY12-HoVaTen-MSSV-CloudServicesAndDeployment) |
+|---|---|
+| Họ và tên | Dương Hà Đức Anh |
+| Mã học viên | 2A202602977 |
+| Repo | https://github.com/duonghaducanh/K4-L3B-DAY12-DuongHaDucAnh-2A202602977-CloudServicesAndDeployment |
 
-## Service
+## Trạng thái
 
 | Mục | Nội dung |
-|-----|----------|
-| Public URL | https://TODO-thay-bang-url-that.up.railway.app |
-| Platform | Railway / Render / Cloud Run — (điền platform bạn dùng) |
-| Ngày deploy | (điền ngày) |
+|---|---|
+| Platform | Render |
+| Public URL | Chưa được cấp; đang chờ tạo Blueprint trong tài khoản Render |
+| Ngày deploy cloud | Chưa xác nhận |
+| Kiểm thử local | CP1 13/13, CP3 22/22, CP4 19/19; 4 kiểm thử bổ sung đạt |
+| Docker trên GitHub Actions | Build thành công; kiểm tra image dưới 500 MiB và non-root đạt |
 
-## Biến Môi Trường Đã Set Trên Cloud
+Chưa coi CP5 hoàn tất. Không có URL hoặc ảnh dashboard giả. LOCAL_FALLBACK
+chưa được bật vì mục tiêu đã chọn là deploy Render.
 
-Ghi tên biến và **nguồn giá trị**, không ghi giá trị:
+## Tạo service từ Blueprint
 
-| Biến | Đã set | Ghi chú |
-|------|--------|---------|
-| `PORT` | ✅ | platform tự gán |
-| `AGENT_API_KEY` | ✅ | đặt trong dashboard, không nằm trong repo |
-| `REDIS_URL` | ✅ | (điền: Redis add-on của platform / Upstash / ...) |
-| `RATE_LIMIT_PER_MINUTE` | ✅ | 10 |
-| `MONTHLY_BUDGET_USD` | ✅ | 10.0 |
-| `LOG_LEVEL` | ✅ | INFO |
+1. Render dashboard → New → Blueprint → chọn repository ở trên, nhánh main.
+2. Render đọc render.yaml để tạo day12-agent và day12-redis, gói free.
+3. Nhập AGENT_API_KEY bằng khóa riêng được sinh ngẫu nhiên; không dùng khóa ví dụ.
+4. Chờ web service Live, lấy Public URL hiển thị trên dashboard.
+5. Điền Public URL vào bảng trên rồi chạy kiểm thử bên dưới.
 
-## Lệnh Kiểm Tra
+Các biến dưới đây đã được khai báo trong Blueprint; trạng thái đã set trên
+cloud chỉ được xác nhận sau khi tạo service:
 
-Thay `<URL>` bằng Public URL ở trên:
+| Biến | Nguồn |
+|---|---|
+| PORT | Render tự cấp, Docker CMD đọc giá trị lúc chạy |
+| AGENT_API_KEY | Nhập riêng trên Render, sync: false |
+| REDIS_URL | connectionString từ service day12-redis |
+| RATE_LIMIT_PER_MINUTE | Blueprint, 10 |
+| MONTHLY_BUDGET_USD | Blueprint, 10.0 |
+| LOG_LEVEL | Blueprint, INFO |
 
-```bash
-# 1. Liveness — mong đợi 200 {"status":"ok"}
-curl -i <URL>/health
+Render Key Value free không bảo đảm persistence qua restart. Redis ngoài
+process giúp chia sẻ state giữa agent; dữ liệu vẫn có thể mất nếu Redis free
+restart. Dùng gói có persistence khi cần bảo toàn lịch sử/ngân sách qua sự cố
+Redis. maxmemoryPolicy=noeviction tránh tự loại bỏ key ngân sách khi đầy RAM.
 
-# 2. Readiness — mong đợi 200 {"status":"ready"} (đã nối được Redis)
-curl -i <URL>/ready
+## Kiểm tra cloud
 
-# 3. Không có API key — mong đợi 401
-curl -i -X POST <URL>/ask \
-  -H "Content-Type: application/json" \
-  -d '{"question":"Hello"}'
+Đặt DEPLOY_API_KEY trong .env cục bộ bằng khóa của service, không phải token
+Render. Không commit .env. Đặt PUBLIC_URL trong shell thành URL từ dashboard:
 
-# 4. Có API key — mong đợi 200 kèm câu trả lời
-curl -i -X POST <URL>/ask \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: $AGENT_API_KEY" \
-  -H "X-User-Id: sv-test" \
-  -d '{"question":"Deploy là gì?"}'
-
-# 5. Rate limit — gọi 15 lần, những lần cuối phải trả 429
-for i in $(seq 1 15); do
-  curl -s -o /dev/null -w "%{http_code} " -X POST <URL>/ask \
-    -H "Content-Type: application/json" \
-    -H "X-API-Key: $AGENT_API_KEY" \
-    -H "X-User-Id: sv-test" \
-    -d '{"question":"test"}'
-done; echo
+```powershell
+.venv/Scripts/python.exe scripts/smoke.py $env:PUBLIC_URL --cloud
+.venv/Scripts/python.exe -m pytest tests/test_cp5.py -v
 ```
 
-## Kết Quả Chạy Thật
+scripts/smoke.py kiểm tra health, readiness, 401 thiếu key, 200 có key và
+history tăng từ 0 lên 2. Script không in giá trị key.
 
-Dán output của các lệnh trên vào đây:
+## Kết quả chạy thật
 
+Uvicorn local với fake Redis (chưa phải cloud hoặc Docker stack):
+
+```text
+/health 200 {"status":"ok","service":"day12-agent","version":"1.0.0"}
+/ready 200 {"status":"ready","redis":true}
+/ask 200 history_length 0
+/ask 200 history_length 2
 ```
-(điền output)
+
+Kết quả cloud: đang chờ URL service.
+
+## Ảnh minh chứng
+
+Cần bổ sung screenshots/dashboard.png từ dashboard Render và
+screenshots/health.png từ kết quả HTTP thực. Không chụp phần environment
+hiện giá trị secret. Chưa có hai ảnh này tại thời điểm ghi nhận.
+
+## CI/CD
+
+Workflow .github/workflows/ci.yml chạy khi push/pull request, gồm test và
+build. Badge README lấy trạng thái thực từ GitHub. CP5 và kiểm tra badge được
+loại khỏi job test để tránh phụ thuộc deployment và vòng lặp tự kiểm tra.
+
+Blueprint mặc định autoDeployTrigger: checksPass: Render chỉ tự deploy sau
+khi CI xanh. Nếu muốn dùng job deploy trong Actions thay cho cơ chế này:
+
+1. Trong Render tắt Auto-Deploy để tránh deploy hai lần.
+2. Tạo GitHub Actions secret RENDER_DEPLOY_HOOK_URL từ Deploy Hook của service.
+3. Tạo Actions variables RENDER_DEPLOY_ENABLED=true và PUBLIC_URL.
+4. Push main. Job deploy đợi test/build đạt rồi yêu cầu Render deploy đúng
+   GITHUB_SHA; sau đó kiểm tra health/readiness. Probe chỉ xác nhận service
+   đang phục vụ, không chứng minh commit mới đã live; đối chiếu dashboard.
+
+Nếu chưa bật biến, job deploy được skip có chủ đích; CI xanh không tự chứng
+minh đã deploy cloud.
+
+## Chạy và scale local
+
+```powershell
+docker compose up -d --build
+docker compose -f docker-compose.yml -f docker-compose.scale.yml up -d --build --scale agent=3
+.venv/Scripts/python.exe scripts/smoke.py http://localhost:8000
 ```
 
-## Ảnh Chụp Màn Hình
-
-Đặt ảnh trong thư mục `screenshots/`:
-
-- `screenshots/dashboard.png` — trang quản lý service trên platform
-- `screenshots/health.png` — kết quả gọi `/health` từ trình duyệt hoặc curl
-
----
-
-## Nếu Dùng Phương Án Dự Phòng
-
-Không đăng ký được tài khoản cloud? Vẫn nộp được bài, nhưng CP5 tối đa 60% điểm:
-
-1. Đặt `LOCAL_FALLBACK=true` trong `.env`
-2. Chạy `docker compose up -d` rồi kiểm tra `docker compose ps`
-3. Chụp màn hình vào `screenshots/`
-4. Chạy `pytest tests/test_cp5.py -v` — bộ test sẽ tự chuyển sang kiểm tra
-   `http://localhost:8000`
-5. Ghi rõ lý do không deploy được vào phần dưới đây:
-
-```
-(điền lý do nếu dùng phương án dự phòng, ngược lại xóa mục này)
-```
+Override scale gỡ port agent và đưa Nginx ra 8000 để tránh xung đột cổng.
+Khi quay lại một agent, dùng --remove-orphans để dừng Nginx của stack này;
+không xóa volume Redis nếu cần giữ lịch sử.

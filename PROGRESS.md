@@ -34,3 +34,10 @@
 - Combined CP1/CP3/CP4 regression: 54 passed.
 - Added docker-compose.scale.yml to avoid host-port conflicts when scaling three agents.
 - History writes/trim/TTL are transactional; Redis connections have bounded timeouts.
+
+## Bonus and extra checks
+
+- GitHub Actions run 36517229712 completed successfully (test + Docker build); deploy was disabled pending Render setup.
+- Four additional checks passed: concurrent quota enforcement, budget short-circuit before LLM, blank secret rejection, monthly bucket isolation.
+- Local Uvicorn smoke: health/ready 200, authenticated asks saw history lengths 0 and 2.
+- Cloud CP5 remains pending a real Render URL and screenshots.
