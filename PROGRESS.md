@@ -46,3 +46,28 @@
 - health.png captures the actual public endpoint; dashboard screenshot is still pending.
 - Bonus tests including the live GitHub badge: 13 passed.
 - CI run 36517699543 measured single-stage 1,188,388,097 bytes; multi-stage 208,822,946 bytes.
+
+## Final verification (2026-09-29)
+
+- Full suite, including real Docker builds, public Render and live CI badge:
+  **95 passed, 5 skipped** in 35.95 seconds. The skips are the four local
+  fallback tests and optional cloud-key test; no required test was skipped.
+- Unmodified `grade.py`: required checkpoints and exercises total **100/100**.
+  Its badge request temporarily failed; the subsequent full suite passed it.
+  Automated exercise completion does not replace manual review.
+- Local Compose agent and Redis are healthy; runtime UID is 10001.
+- Real HTTP smoke: health/ready 200; missing key 401; authenticated requests
+  200 with history lengths 0 and 2.
+- Three-container experiment: history lengths 0,2,4,6,8,10 across different
+  agents. See benchmarks/scale-evidence.txt. Stack restored to one agent.
+- Real SIGTERM stop exited 0 and logged service_stopped / Application shutdown
+  complete; agent restarted successfully, Redis data retained.
+- Source-only rebuild reused dependency layers; benchmarks/cache-build.txt.
+- First local CP2 build exceeded 900 seconds downloading dependencies; later
+  original CP2 tests passed 16/16. Use PYTHONUTF8=1 on Windows to avoid Docker
+  log decoding errors with the default cp1252 subprocess encoding.
+- Original grading tests and grade.py unchanged. No .env, virtualenv or
+  configured secret value is tracked in Git.
+- Remaining manual evidence: screenshots/dashboard.png from the signed-in
+  Render dashboard. The cloud authenticated test is optional; set
+  DEPLOY_API_KEY locally to enable it.

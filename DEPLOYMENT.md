@@ -16,7 +16,8 @@
 | Public URL | https://day12-agent-gu55.onrender.com |
 | Ngày deploy cloud | 2026-09-29 |
 | Kiểm thử local | CP1 13/13, CP3 22/22, CP4 19/19; 4 kiểm thử bổ sung đạt |
-| Docker trên GitHub Actions | Build thành công; kiểm tra image dưới 500 MiB và non-root đạt |
+| Docker trên GitHub Actions | Build thành công; image 208.82 MB, non-root đạt |
+| Toàn bộ test cuối | 95 passed, 5 skipped; grade.py 100/100 tự động |
 
 Public HTTPS đã kiểm tra thành công. LOCAL_FALLBACK=false. Ảnh dashboard
 còn cần bổ sung; kiểm thử có key chờ DEPLOY_API_KEY cục bộ.
@@ -29,8 +30,8 @@ còn cần bổ sung; kiểm thử có key chờ DEPLOY_API_KEY cục bộ.
 4. Chờ web service Live, lấy Public URL hiển thị trên dashboard.
 5. Điền Public URL vào bảng trên rồi chạy kiểm thử bên dưới.
 
-Các biến dưới đây đã được khai báo trong Blueprint; trạng thái đã set trên
-cloud chỉ được xác nhận sau khi tạo service:
+Các biến dưới đây khai báo trong Blueprint. Service đã khởi động và /ready
+trả 200, xác nhận cấu hình bắt buộc cùng kết nối Redis hoạt động:
 
 | Biến | Nguồn |
 |---|---|
@@ -117,3 +118,18 @@ docker compose -f docker-compose.yml -f docker-compose.scale.yml up -d --build -
 Override scale gỡ port agent và đưa Nginx ra 8000 để tránh xung đột cổng.
 Khi quay lại một agent, dùng --remove-orphans để dừng Nginx của stack này;
 không xóa volume Redis nếu cần giữ lịch sử.
+
+## Kết quả Docker local cuối
+
+Compose agent/Redis healthy. User runtime UID 10001. HTTP smoke có key hợp
+lệ trả 200 và history 0 rồi 2; thiếu key trả 401. Ba agent dùng chung Redis
+trả history 0,2,4,6,8,10; xem benchmarks/scale-evidence.txt. SIGTERM dừng
+process với exit code 0 và log Application shutdown complete. Đã khởi động
+lại agent và giữ nguyên volume Redis.
+
+Trên PowerShell trước khi chạy test hoặc grade.py, nên đặt:
+
+```powershell
+$env:PYTHONUTF8 = '1'
+$env:PYTHONIOENCODING = 'utf-8'
+```

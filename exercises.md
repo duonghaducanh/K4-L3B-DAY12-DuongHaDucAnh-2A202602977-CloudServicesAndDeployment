@@ -29,7 +29,7 @@ Số đo từ Docker image inspect trong GitHub Actions run 36517699543, artifac
 
 ### Câu 4 — Thứ tự lệnh trong Dockerfile (CP2)
 
-requirements.txt được COPY trước bước cài dependency; app và utils được COPY riêng ở runtime. Khi chỉ đổi app/main.py, cache dependency builder vẫn hợp lệ; COPY app và các layer runtime phía sau được tính lại. COPY . . trước pip install làm checksum source thay đổi và vô hiệu cache bước pip. Đây là phân tích Dockerfile; quan sát cache thực tế sẽ bổ sung khi build local hoàn thành.
+requirements.txt được COPY trước bước cài dependency; app và utils được COPY riêng ở runtime. Khi chỉ đổi app/main.py, cache dependency builder vẫn hợp lệ; COPY app và các layer runtime phía sau được tính lại. COPY . . trước pip install làm checksum source thay đổi và vô hiệu cache bước pip. Đã thử thêm một comment vào app/main.py rồi build lại và khôi phục file. Log benchmarks/cache-build.txt xác nhận COPY requirements.txt, bước pip install và COPY venv đều CACHED; COPY app và COPY utils chạy lại. Đây là quan sát thực từ Docker Desktop.
 
 ### Câu 5 — Vì sao không chạy bằng root (CP2)
 
@@ -49,7 +49,7 @@ Redis mất kết nối khiến probe kiểm tra Redis trả 503 ở cả ba ins
 
 ### Câu 9 — Stateless (CP4)
 
-Kiểm thử hai ConversationStore dùng chung Redis xác nhận instance B đọc được message instance A ghi. Uvicorn local với fake Redis đã trả history_length 0 rồi 2 cho hai câu liên tiếp; đây chưa phải bằng chứng ba container. Cấu hình docker-compose.scale.yml bỏ port cố định của agent và đưa Nginx ra cổng 8000. Lịch sử chung tăng 0,2,4,... đến tối đa 20. Dict Python riêng từng process sẽ tạo các nhánh 0,0,2,... tùy instance nhận request và mất khi restart.
+Đã chạy ba agent thật bằng Compose với Redis thật; dùng docker exec gửi HTTP tới từng agent luân phiên, cùng X-User-Id. Kết quả 0,2,4,6,8,10 qua instance 1,2,3,1,2,3 được lưu trong benchmarks/scale-evidence.txt. Thử nghiệm gọi trực tiếp từng container, chưa chạy Nginx. Sau đó đưa stack về một agent; Redis volume được giữ nguyên. Cấu hình docker-compose.scale.yml bỏ port cố định của agent và đưa Nginx ra cổng 8000. Lịch sử chung tăng 0,2,4,... đến tối đa 20. Dict Python riêng từng process sẽ tạo các nhánh 0,0,2,... tùy instance nhận request và mất khi restart.
 
 ### Câu 10 — Deploy thật (CP5)
 
