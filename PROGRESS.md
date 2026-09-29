@@ -15,3 +15,8 @@
 
 - Config, JSON logging and liveness: 13/13 tests passed.
 - Startup validates required settings before accepting traffic.
+
+## CP2
+
+- Dockerfile, Compose and ignore rules: 14 static tests passed.
+- Real build started; base-image download is slow. Build/size evidence will be recorded after completion.
