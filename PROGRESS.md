@@ -27,3 +27,10 @@
 - Rate limiting uses Redis WATCH/MULTI to prevent concurrent quota races.
 - Lab budget guard checks accrued spending before a call; it is not a strict reservation system for concurrent LLM billing.
 - X-User-Id is supplied by the trusted caller of the shared API key; production multi-tenant identity must come from verified credentials.
+
+## CP4
+
+- Redis history, readiness and signal forwarding: 19/19 tests passed.
+- Combined CP1/CP3/CP4 regression: 54 passed.
+- Added docker-compose.scale.yml to avoid host-port conflicts when scaling three agents.
+- History writes/trim/TTL are transactional; Redis connections have bounded timeouts.
