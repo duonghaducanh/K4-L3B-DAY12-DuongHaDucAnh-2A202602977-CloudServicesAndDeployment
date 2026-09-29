@@ -10,3 +10,8 @@
 - `.env` and both local virtual environments are excluded from Git.
 - Implementation and documentation were prepared with AI assistance; the
   student must review and be able to explain the submitted work.
+
+## CP1
+
+- Config, JSON logging and liveness: 13/13 tests passed.
+- Startup validates required settings before accepting traffic.
